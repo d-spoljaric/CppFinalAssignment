@@ -1,0 +1,3 @@
+C:/Users/dspol/Desktop/MSc Material/CppAssignment/cmake-build-debug/CMakeFiles/CppAssignment.dir
+C:/Users/dspol/Desktop/MSc Material/CppAssignment/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/dspol/Desktop/MSc Material/CppAssignment/cmake-build-debug/CMakeFiles/rebuild_cache.dir
