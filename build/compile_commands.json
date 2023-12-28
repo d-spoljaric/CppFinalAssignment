@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/Users/jbarens/2023-2024_TUDelft/Q2/Cplusplus/Assignment/CppFinalAssignment/build",
+  "command": "/usr/bin/clang++   -g -std=gnu++14 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk -o CMakeFiles/CppAssignment.dir/main.cpp.o -c /Users/jbarens/2023-2024_TUDelft/Q2/Cplusplus/Assignment/CppFinalAssignment/main.cpp",
+  "file": "/Users/jbarens/2023-2024_TUDelft/Q2/Cplusplus/Assignment/CppFinalAssignment/main.cpp",
+  "output": "CMakeFiles/CppAssignment.dir/main.cpp.o"
+}
+]
