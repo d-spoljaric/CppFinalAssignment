@@ -15,7 +15,7 @@ private:
 public:
     // Constructors
     Vector() : length(0) {}
-    Vector(int len) : length(len), data(new T[len]()) {}
+    explicit Vector(int len) : length(len), data(new T[len]()) {}
     Vector(const Vector& other) : length(other.length), data(new T[other.length]) {
         std::copy(other.data.get(), other.data.get() + length, data.get());
     }
@@ -25,6 +25,7 @@ public:
     Vector(std::initializer_list<T> list) : Vector((int)list.size()) {
         std::copy(list.begin(), list.end(), data.get());
     }
+    ~Vector() = default;
 
     // Assignment Operators
     Vector& operator=(const Vector& other) {
@@ -87,6 +88,12 @@ Vector operator+(const Vector& rhs) const {
     }
 
     int len() const { return length; }
+
+    void print_data(){
+        for (int i = 0; i < length; i++){
+            std::cout << data[i] << std::endl;
+        }
+    }
 };
 template<typename T>
 Vector<T> operator*(const Vector<T>& vec, const T& scalar) {
@@ -233,6 +240,7 @@ public:
 };
 
 int main(int argc, char* argv[]) {
+
     const double alpha = 0.3125;
     const int m = 3;
     const double dt = 0.1;
@@ -249,9 +257,9 @@ int main(int argc, char* argv[]) {
     }
 
     // // Repeat similar steps for the two-dimensional problem
-    // Heat<2, double> solver2D(alpha, m, dt);
-    // auto solution2D = solver2D.solve(t_final);
-    // auto exactSolution2D = solver2D.exact(t_final);
+//     Heat<2, double> solver2D(alpha, m, dt);
+//     auto solution2D = solver2D.solve(t_final);
+//     auto exactSolution2D = solver2D.exact(t_final);
 
     // // Print results (can be replaced with actual comparison)
     // for (int i = 0; i < solution2D.len(); ++i) {
