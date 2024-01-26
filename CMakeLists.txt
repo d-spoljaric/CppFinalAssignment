@@ -4,4 +4,5 @@ project(CppAssignment)
 set(CMAKE_CXX_STANDARD 14)
 
 add_executable(CppAssignment
-        main.cpp)
+        main.cpp
+)
