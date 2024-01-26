@@ -1,129 +1,132 @@
 #include <cmath>
 #include <iostream>
 #include <initializer_list>
-#include <memory>
-#include <map>
 #include <stdexcept>
 #include <utility>
+#include <map>
 
 template <typename T>
 class Vector {
 private:
+    T* elements;
     int length;
-    std::unique_ptr<T[]> data;
 
 public:
     // Constructors
-    Vector() : length(0) {}
-    explicit Vector(int len) : length(len), data(new T[len]()) {}
-    Vector(const Vector& other) : length(other.length), data(new T[other.length]) {
-        std::copy(other.data.get(), other.data.get() + length, data.get());
+    Vector() : elements(nullptr), length(0) {}
+    Vector(int size) : elements(new T[size]), length(size) {
+        std::fill_n(elements, size, T());
     }
-    Vector(Vector&& other) noexcept : length(other.length), data(std::move(other.data)) {
+    Vector(std::initializer_list<T> list) : elements(new T[list.size()]), length(static_cast<int>(list.size())) {
+        std::copy(list.begin(), list.end(), elements);
+    }
+    Vector(const Vector<T>& other) : elements(new T[other.length]), length(other.length) {
+        std::copy(other.elements, other.elements + length, elements);
+    }
+    Vector(Vector<T>&& other) noexcept : elements(other.elements), length(other.length) {
+        other.elements = nullptr;
         other.length = 0;
     }
-    Vector(std::initializer_list<T> list) : Vector((int)list.size()) {
-        std::copy(list.begin(), list.end(), data.get());
-    }
-    ~Vector() = default;
 
-    // Assignment Operators
-    Vector& operator=(const Vector& other) {
+    // Destructor
+    ~Vector() {
+        delete[] elements;
+        elements = nullptr;
+    }
+
+    // Assignment operators
+    Vector& operator=(const Vector<T>& other) {
         if (this != &other) {
+            delete[] elements;
             length = other.length;
-            data.reset(new T[length]); // Adjust memory allocation
-            std::copy(other.data.get(), other.data.get() + length, data.get());
+            elements = new T[length];
+            std::copy(other.elements, other.elements + length, elements);
         }
         return *this;
     }
-    Vector& operator=(Vector&& other) noexcept {
-        length = other.length;
-        data = std::move(other.data);
-        other.length = 0;
+
+    Vector& operator=(Vector<T>&& other) noexcept {
+        if (this != &other) {
+            delete[] elements;
+            length = other.length;
+            elements = other.elements;
+            other.elements = nullptr;
+            other.length = 0;
+        }
         return *this;
     }
 
-
-    Vector operator-(const Vector& rhs) const {
-    Vector result(length);
-    for (int i = 0; i < length; ++i) {
-        result[i] = data[i] - rhs[i];
-    }
-    return result;
-}
-
-Vector operator*(T scalar) const {
-    Vector result(length);
-    for (int i = 0; i < length; ++i) {
-        result[i] = data[i] * scalar;
-    }
-    return result;
-}
-// Inside the Vector class
-Vector operator+(const Vector& rhs) const {
-    if (length != rhs.length) {
-        throw std::invalid_argument("Vectors must be of the same length to add.");
-    }
-    Vector result(length);
-    for (int i = 0; i < length; ++i) {
-        result[i] = data[i] + rhs[i];
-    }
-    return result;
-}
-
-
-   // Access Operators with bounds checking
+    // Access operators
     T& operator[](int i) {
-        if (i < 0 || i >= length) {
-            throw std::out_of_range("Vector index out of bounds");
-        }
-        return data[i];
+        if (i < 0 || i >= length) throw std::out_of_range("Vector index out of bounds");
+        return elements[i];
     }
-
     const T& operator[](int i) const {
-        if (i < 0 || i >= length) {
-            throw std::out_of_range("Vector index out of bounds");
-        }
-        return data[i];
+        if (i < 0 || i >= length) throw std::out_of_range("Vector index out of bounds");
+        return elements[i];
     }
 
-    int len() const { return length; }
-
-    void print_data(){
-        for (int i = 0; i < length; i++){
-            std::cout << data[i] << std::endl;
+    // Operator overloads
+    template<typename U>
+    Vector<typename std::common_type<T,U>::type> operator+(const Vector<U>& other) const {
+        if (length != other.len()) throw std::invalid_argument("Vectors must be of the same length to add.");
+        Vector<typename std::common_type<T,U>::type> result(length);
+        for (int i = 0; i < length; i++) {
+            result[i] = elements[i] + other[i];
         }
+        return result;
+    }
+
+    template<typename U>
+    Vector<typename std::common_type<T,U>::type> operator-(const Vector<U>& other) const {
+        if (length != other.len()) throw std::invalid_argument("Vectors must be of the same length to subtract.");
+        Vector<typename std::common_type<T,U>::type> result(length);
+        for (int i = 0; i < length; i++) {
+            result[i] = elements[i] - other[i];
+        }
+        return result;
+    }
+
+    template<typename U>
+    Vector<typename std::common_type<T,U>::type> operator*(const U& scalar) const {
+        Vector<typename std::common_type<T,U>::type> result(length);
+        for (int i = 0; i < length; i++) {
+            result[i] = elements[i] * scalar;
+        }
+        return result;
+    }
+
+    // Utility functions
+    int len() const {
+        return length;
+    }
+
+
+    void info(const std::string& txt) const {
+        std::cout << "Vector " << txt << ": ";
+        for (int i = 0; i < length; i++) {
+            std::cout << elements[i] << " ";
+        }
+        std::cout << std::endl;
     }
 };
-template<typename T>
-Vector<T> operator*(const Vector<T>& vec, const T& scalar) {
-    Vector<T> result(vec.len());
-    for (int i = 0; i < vec.len(); ++i) {
-        result[i] = vec[i] * scalar;
-    }
-    return result;
+
+// Scalar multiplication: scalar * vector
+template <typename T, typename U>
+Vector<typename std::common_type<T, U>::type> operator*(const T& scalar, const Vector<U>& vec) {
+    return vec * scalar;
 }
 
-template<typename T>
-Vector<T> operator*(const T& scalar, const Vector<T>& vec) {
-    return vec * scalar; // Utilize the above operator
-}
-
-
-
-// Implement dot function outside of class
+// Dot product
 template<typename T, typename U>
-typename std::common_type<T, U>::type 
-dot(const Vector<T>& lhs, const Vector<U>& rhs) {
-    if (lhs.len() != rhs.len()) throw std::invalid_argument("Vectors must be of the same length");
-
+typename std::common_type<T, U>::type dot(const Vector<T>& lhs, const Vector<U>& rhs) {
+    if (lhs.len() != rhs.len()) throw std::invalid_argument("Vectors must be of the same length for dot product.");
     typename std::common_type<T, U>::type result = 0;
-    for (int i = 0; i < lhs.len(); ++i) {
+    for (int i = 0; i < lhs.len(); i++) {
         result += lhs[i] * rhs[i];
     }
     return result;
 }
-
 template <typename T>
 class Matrix {
 private:
@@ -132,57 +135,50 @@ private:
 
 public:
     Matrix(int rows, int cols) : rows(rows), cols(cols) {}
-
     T& operator[](const std::pair<int, int>& ij) {
         return data[ij];
     }
-T operator()(const std::pair<int, int>& ij) const {
-    auto it = data.find(ij);
-    if (it == data.end()) throw std::runtime_error("Matrix entry not found.");
-    return it->second;
-}
-
-template<typename U>
-Vector<typename std::common_type<T, U>::type> operator*(const Vector<U>& rhs) const {
-    if (rhs.len() != cols) {
-        throw std::invalid_argument("Vector length must match the number of matrix columns");
+    const T& operator()(const std::pair<int, int>& ij) const {
+        auto it = data.find(ij);
+        if (it == data.end()) throw std::runtime_error("Matrix entry not found.");
+        return it->second;
     }
-
-    Vector<typename std::common_type<T, U>::type> result(rhs.len());
-    for (const auto& kv : data) {
-        int i = kv.first.first;
-        int j = kv.first.second;
-        if (j >= 0 && j < rhs.len()) {
-            result[i] += kv.second * rhs[j];
+    template<typename U>
+    Vector<typename std::common_type<T, U>::type> operator*(const Vector<U>& rhs) const {
+        if (rhs.len() != cols) throw std::invalid_argument("Vector length must match the number of matrix columns");
+        Vector<typename std::common_type<T, U>::type> result(rows);
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < cols; ++j) {
+                auto it = data.find({i, j});
+                if (it != data.end()) {
+                    result[i] += it->second * rhs[j];
+                }
+            }
         }
+        return result;
     }
-    return result;
-}
-
 };
 
 template<typename T>
-int cg(const Matrix<T>& A, 
-       const Vector<T>& b, 
-       Vector<T>& x, 
-       T tol = (T)1e-8, 
-       int maxiter = 100) {
+int cg(const Matrix<T>& A, const Vector<T>& b, Vector<T>& x, T tol = (T)1e-8, int maxiter = 100) {
     Vector<T> r = b - A * x;
     Vector<T> p = r;
     T rsold = dot(r, r);
-
     for (int i = 0; i < maxiter; ++i) {
         Vector<T> Ap = A * p;
         T alpha = rsold / dot(p, Ap);
-        x = x + alpha * p;
-        r = r - alpha * Ap;
+        x = x + p * alpha;
+        r = r - Ap * alpha;
         T rsnew = dot(r, r);
         if (sqrt(rsnew) < tol) return i;
-        p = r + (rsnew / rsold) * p;
+        p = r + p * (rsnew / rsold);
         rsold = rsnew;
     }
-    return -1;
+    return -1
+
+            ;
 }
+
 template <int n, typename T>
 class Heat {
 private:
@@ -193,17 +189,23 @@ private:
     Matrix<T> M;
 
 public:
-    Heat(T alpha, int m, T dt) 
-        : alpha(alpha), m(m), dt(dt), total_nodes(std::pow(m, n)), M(total_nodes, total_nodes) {
+    Heat(T alpha, int m, T dt) : alpha(alpha), m(m), dt(dt), total_nodes(std::pow(m, n)), M(total_nodes, total_nodes) {
         T dx = 1.0 / (m + 1);
-
-        // Fill the matrix M
-        for (int i = 0; i < total_nodes; ++i) {
-            for (int k = 0; k < n; ++k) {
-                int stride = std::pow(m, k);
-                if (i % stride < m - 1) M[{i, i + stride}] = -alpha * dt / (dx * dx);
-                if (i % stride > 0) M[{i, i - stride}] = -alpha * dt / (dx * dx);
-                M[{i, i}] += 1;
+        if (n == 1) {
+            // Assembly for 1D case
+            for (int i = 0; i < total_nodes; ++i) {
+                if (i > 0) M[{i, i - 1}] = -alpha * dt / (dx * dx);
+                M[{i, i}] = 1 + 2 * alpha * dt / (dx * dx);
+                if (i < total_nodes - 1) M[{i, i + 1}] = -alpha * dt / (dx * dx);
+            }
+        } else if (n == 2) {
+            // Assembly for 2D case
+            for (int i = 0; i < total_nodes; ++i) {
+                if (i % m > 0) M[{i, i - 1}] = -alpha * dt / (dx * dx);  // Left
+                if (i % m < m - 1) M[{i, i + 1}] = -alpha * dt / (dx * dx);  // Right
+                if (i >= m) M[{i, i - m}] = -alpha * dt / (dx * dx);  // Top
+                if (i < total_nodes - m) M[{i, i + m}] = -alpha * dt / (dx * dx);  // Bottom
+                M[{i, i}] = 1 + 4 * alpha * dt / (dx * dx);  // Center
             }
         }
     }
@@ -211,7 +213,6 @@ public:
     Vector<T> exact(T t) const {
         Vector<T> u(total_nodes);
         T factor = std::exp(-n * M_PI * M_PI * alpha * t);
-
         for (int i = 0; i < total_nodes; ++i) {
             T prod = 1;
             for (int k = 0; k < n; ++k) {
@@ -221,50 +222,64 @@ public:
             }
             u[i] = factor * prod;
         }
-
         return u;
     }
-
-    Vector<T> solve(T t_final) const {
-        Vector<T> u = exact(0); // Initial condition
+    Vector<T> solve(T t_final, T tol = (T)1e-8, int maxiter = 1000) const {
+        Vector<T> u = exact(0);
         Vector<T> u_new(total_nodes);
-
-        int steps = t_final / dt;
+        int steps = static_cast<int>(t_final / dt);
         for (int step = 0; step < steps; ++step) {
-            cg(M, u, u_new);
+            cg(M, u, u_new, tol, maxiter);
             u = u_new;
         }
-
         return u;
     }
+    // Method to get the matrix for verification
+    const Matrix<T>& getMatrix() const {
+        return M;
+    }
 };
+template<typename T>
+void printMatrix(const Matrix<T>& mat, int rows, int cols) {
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            try {
+                T value = mat({i, j});
+                std::cout << value << " ";
+            } catch (const std::runtime_error&) {
+                std::cout << "0 ";
+            }
+        }
+        std::cout << std::endl;
+    }
+}
 
 int main(int argc, char* argv[]) {
-
     const double alpha = 0.3125;
     const int m = 3;
     const double dt = 0.1;
-    const double t_final = 1.0;
+    const double t_final_1D = 1.0;
+    const double t_final_2D = 0.5;
 
-    // Creating a solver for the one-dimensional problem
     Heat<1, double> solver1D(alpha, m, dt);
-    auto solution1D = solver1D.solve(t_final);
-    auto exactSolution1D = solver1D.exact(t_final);
-
-    // Print results (can be replaced with actual comparison)
+    auto solution1D = solver1D.solve(t_final_1D);
+    auto exactSolution1D = solver1D.exact(t_final_1D);
     for (int i = 0; i < solution1D.len(); ++i) {
-        std::cout << "Numerical: " << solution1D[i] << ", Exact: " << exactSolution1D[i] << std::endl;
+        std::cout << "Numerical 1D: " << solution1D[i] << ", Exact 1D: " << exactSolution1D[i] << std::endl;
     }
 
-    // // Repeat similar steps for the two-dimensional problem
-//     Heat<2, double> solver2D(alpha, m, dt);
-//     auto solution2D = solver2D.solve(t_final);
-//     auto exactSolution2D = solver2D.exact(t_final);
+    // Print 1D Matrix for verification
+    printMatrix(solver1D.getMatrix(), m, m);
 
-    // // Print results (can be replaced with actual comparison)
-    // for (int i = 0; i < solution2D.len(); ++i) {
-    //     std::cout << "Numerical: " << solution2D[i] << ", Exact: " << exactSolution2D[i] << std::endl;
-    // }   
+    Heat<2, double> solver2D(alpha, m, dt);
+    auto solution2D = solver2D.solve(t_final_2D);
+    auto exactSolution2D = solver2D.exact(t_final_2D);
+    for (int i = 0; i < solution2D.len(); ++i) {
+        std::cout << "Numerical 2D: " << solution2D[i] << ", Exact 2D: " << exactSolution2D[i] << std::endl;
+    }
+
+    // Print 2D Matrix for verification
+    printMatrix(solver2D.getMatrix(), m * m, m * m);
 
     return 0;
 }
