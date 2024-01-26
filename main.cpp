@@ -14,7 +14,7 @@ private:
 public:
     // Constructors
     Vector() : elements(nullptr), length(0) {}
-    Vector(int size) : elements(new T[size]), length(size) {
+    explicit Vector(int size) : elements(new T[size]), length(size) {
         std::fill_n(elements, size, T());
     }
     Vector(std::initializer_list<T> list) : elements(new T[list.size()]), length(static_cast<int>(list.size())) {
@@ -170,13 +170,15 @@ int cg(const Matrix<T>& A, const Vector<T>& b, Vector<T>& x, T tol = (T)1e-8, in
         x = x + p * alpha;
         r = r - Ap * alpha;
         T rsnew = dot(r, r);
-        if (sqrt(rsnew) < tol) return i;
+        if (sqrt(rsnew) < tol*tol){
+            printf("Converged after %i iterations \n", i+1);
+            return i;
+        }
         p = r + p * (rsnew / rsold);
         rsold = rsnew;
     }
-    return -1
-
-            ;
+    std::cout << "Didn't converge" << std::endl;
+    return -1;
 }
 
 template <int n, typename T>
@@ -257,7 +259,7 @@ void printMatrix(const Matrix<T>& mat, int rows, int cols) {
 int main(int argc, char* argv[]) {
     const double alpha = 0.3125;
     const int m = 3;
-    const double dt = 0.1;
+    const double dt = 0.001;
     const double t_final_1D = 1.0;
     const double t_final_2D = 0.5;
 
@@ -268,7 +270,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Numerical 1D: " << solution1D[i] << ", Exact 1D: " << exactSolution1D[i] << std::endl;
     }
 
-    // Print 1D Matrix for verification
+//  Print 1D Matrix for verification
     printMatrix(solver1D.getMatrix(), m, m);
 
     Heat<2, double> solver2D(alpha, m, dt);
@@ -278,7 +280,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Numerical 2D: " << solution2D[i] << ", Exact 2D: " << exactSolution2D[i] << std::endl;
     }
 
-    // Print 2D Matrix for verification
+//     Print 2D Matrix for verification
     printMatrix(solver2D.getMatrix(), m * m, m * m);
 
     return 0;
