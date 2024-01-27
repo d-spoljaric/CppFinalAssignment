@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <utility>
 #include <map>
+#include <chrono>
 
 template <typename T>
 class Vector {
@@ -200,7 +201,7 @@ public:
     }
     const T& operator()(const std::pair<int, int>& ij) const {
         auto it = data.find(ij);
-        if (it == data.end()) throw std::invalid_argument("Matrix entry not found.");
+        if (it == data.end()) throw std::runtime_error("Matrix entry not found.");
         return it->second;
     }
 };
@@ -230,18 +231,20 @@ int cg(const Matrix<T>& A, const Vector<T>& b, Vector<T>& x, T tol = (T)1e-8, in
     Vector<T> r = b - A * x;
     Vector<T> p = r;
     T rsold = dot(r, r);
+    Vector<T> Ap(x.len());
     for (int i = 0; i < maxiter; ++i) {
-        Vector<T> Ap = A * p;
+        Ap = A * p;
         T alpha = rsold / dot(p, Ap);
         x = x + p * alpha;
         r = r - Ap * alpha;
         T rsnew = dot(r, r);
-        if (sqrt(rsnew) < tol) return i;
+        if (rsnew < tol*tol) return i;
         p = r + p * (rsnew / rsold);
         rsold = rsnew;
     }
     return -1;
 }
+
 
 template <int n, typename T>
 class Heat {
@@ -303,6 +306,7 @@ public:
         return M;
     }
 };
+
 template<typename T>
 void printMatrix(const Matrix<T>& mat, int rows, int cols) {
     for (int i = 0; i < rows; ++i) {
@@ -319,15 +323,20 @@ void printMatrix(const Matrix<T>& mat, int rows, int cols) {
 }
 
 int main(int argc, char* argv[]) {
-    bool runSimulation = false;
-    Vector<double> v1d({0.0, 1.0, 2.0});
-    Vector<double> v2d({2.0, 1.0, 0.0});
-    Vector<float> v1f({0.0f, 1.0f, 2.0f});
-    Vector<float> v2f({2.0f, 1.0f, 0.0f});
-    Vector<int> v1i({0, 1, 2});
-    Vector<int> v2i({2, 1, 0});
-
-    Vector<float> v_test = v1d;
+    bool runSimulation = true;
+//    Vector<double> v1d({0.0, 1.0, 2.0});
+//    Vector<double> v2d({2.0, 1.0, 0.0});
+//    Vector<float> v1f({0.0f, 1.0f, 2.0f});
+//    Vector<float> v2f({2.0f, 1.0f, 0.0f});
+//    Vector<int> v1i({0, 1, 2});
+//    Vector<int> v2i({2, 1, 0});
+//
+//    Vector<float> v_test = v1d;
+//
+//    Matrix<double> M(5, 5);
+//    printMatrix(M, 4, 4);
+//    M[{1,2}] = 10.0;
+//    printMatrix(M, 5, 5);
 
     if(runSimulation) {
         const double alpha = 0.3125;
@@ -335,23 +344,30 @@ int main(int argc, char* argv[]) {
         const double dt = 0.001;
         const double t_final_1D = 1.0;
         const double t_final_2D = 0.5;
-
-        Heat<1, double> solver1D(alpha, m, dt);
-        auto solution1D = solver1D.solve(t_final_1D);
-        auto exactSolution1D = solver1D.exact(t_final_1D);
-        for (int i = 0; i < solution1D.len(); ++i) {
-            std::cout << "Numerical 1D: " << solution1D[i] << ", Exact 1D: " << exactSolution1D[i] << std::endl;
-        }
+//
+//        Heat<1, double> solver1D(alpha, m, dt);
+//        auto solution1D = solver1D.solve(t_final_1D);
+//        auto exactSolution1D = solver1D.exact(t_final_1D);
+//        for (int i = 0; i < solution1D.len(); ++i) {
+//            std::cout << "Numerical 1D: " << solution1D[i] << ", Exact 1D: " << exactSolution1D[i] << std::endl;
+//        }
 
 //     Print 1D Matrix for verification
 //     printMatrix(solver1D.getMatrix(), m, m);
 
+        auto start = std::chrono::high_resolution_clock::now();
         Heat<2, double> solver2D(alpha, m, dt);
         auto solution2D = solver2D.solve(t_final_2D);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+        std::cout << duration.count() << std::endl;
         auto exactSolution2D = solver2D.exact(t_final_2D);
-        for (int i = 0; i < solution2D.len(); ++i) {
-            std::cout << "Numerical 2D: " << solution2D[i] << ", Exact 2D: " << exactSolution2D[i] << std::endl;
-        }
+//        std::cout << "Numerical at (0,0): " << numerical[0] << "| Exact at (0.0): " << exact[0] << std::endl;
+
+
+//        for (int i = 0; i < solution2D.len(); ++i) {
+//            std::cout << "Numerical 2D: " << solution2D[i] << ", Exact 2D: " << exactSolution2D[i] << std::endl;
+//        }
 
         // Print 2D Matrix for verification
 //     printMatrix(solver2D.getMatrix(), m * m, m * m);
