@@ -7,22 +7,42 @@
 
 template <typename T>
 class Vector {
-private:
+public:
     T* elements;
     int length;
 
-public:
     // Constructors
+
+    // Default constructor
     Vector() : elements(nullptr), length(0) {}
-    Vector(int size) : elements(new T[size]), length(size) {
+
+    // Size constructor
+    explicit Vector(int size) : elements(new T[size]), length(size) {
         std::fill_n(elements, size, T());
     }
+
+    // List constructor
     Vector(std::initializer_list<T> list) : elements(new T[list.size()]), length(static_cast<int>(list.size())) {
         std::copy(list.begin(), list.end(), elements);
     }
+
+    // Copy constructor
+    template<typename U>
+    Vector(const Vector<U>& other) : elements(new T[other.length]), length(other.length) {
+        std::copy(other.elements, other.elements + length, elements);
+    }
+
     Vector(const Vector<T>& other) : elements(new T[other.length]), length(other.length) {
         std::copy(other.elements, other.elements + length, elements);
     }
+
+    // Move constructor
+    template<typename U>
+    Vector(Vector<U>&& other) noexcept : elements(other.elements), length(other.length) {
+        other.elements = nullptr;
+        other.length = 0;
+    }
+
     Vector(Vector<T>&& other) noexcept : elements(other.elements), length(other.length) {
         other.elements = nullptr;
         other.length = 0;
@@ -35,12 +55,38 @@ public:
     }
 
     // Assignment operators
-    Vector& operator=(const Vector& other) {
+
+    // Copy operator
+    template<typename U>
+    Vector& operator=(const Vector<U>& other) {
         if (this != &other) {
             delete[] elements;
             length = other.length;
             elements = new T[length];
             std::copy(other.elements, other.elements + length, elements);
+        }
+        return *this;
+    }
+
+    Vector& operator=(const Vector<T>& other) {
+        if (this != &other) {
+            delete[] elements;
+            length = other.length;
+            elements = new T[length];
+            std::copy(other.elements, other.elements + length, elements);
+        }
+        return *this;
+    }
+
+    // Move operator
+    template<typename U>
+    Vector& operator=(Vector<U>&& other) noexcept {
+        if (this != &other) {
+            delete[] elements;
+            length = other.length;
+            elements = other.elements;
+            other.elements = nullptr;
+            other.length = 0;
         }
         return *this;
     }
@@ -133,9 +179,14 @@ public:
     std::map<std::pair<int, int>, T> data;
     int rows, cols;
 
-    Matrix(){}
+    Matrix(){
+        rows = 0;
+        cols = 0;
+        data;
+    }
     Matrix(int rows, int cols) : rows(rows), cols(cols) {}
     ~Matrix(){
+        data.clear();
         rows = 0;
         cols = 0;
     }
@@ -143,21 +194,18 @@ public:
     T& operator[](const std::pair<int, int>& ij) {
         if (ij.first >= rows || ij.second >= cols || ij.first < 0 || ij.second < 0){
             throw std::invalid_argument("Indices out of bound");
-        }
-        if(data.find(ij) == data.end()){
-            data.insert({ij, 0});
-            return data[ij];
-        }
-        else{
+        } else {
             return data[ij];
         }
     }
     const T& operator()(const std::pair<int, int>& ij) const {
         auto it = data.find(ij);
-        if (it == data.end()) throw std::runtime_error("Matrix entry not found.");
+        if (it == data.end()) throw std::invalid_argument("Matrix entry not found.");
         return it->second;
     }
 };
+// Matrix, vector multiplication
+
 template<typename T, typename U>
 Vector<typename std::common_type<T, U>::type> operator*(const Matrix<T>& lhs, const Vector<U>& rhs){
     if(lhs.cols != rhs.len()){
@@ -168,9 +216,8 @@ Vector<typename std::common_type<T, U>::type> operator*(const Matrix<T>& lhs, co
         int i = it -> first.first;
         int j = it -> first.second;
         T value = it -> second;
-        if(it != lhs.data.end()) {
-            result[i] += value * rhs[j];
-        }
+
+        result[i] += value * rhs[j];
     }
     return result;
 }
@@ -193,9 +240,7 @@ int cg(const Matrix<T>& A, const Vector<T>& b, Vector<T>& x, T tol = (T)1e-8, in
         p = r + p * (rsnew / rsold);
         rsold = rsnew;
     }
-    return -1
-
-            ;
+    return -1;
 }
 
 template <int n, typename T>
@@ -274,31 +319,42 @@ void printMatrix(const Matrix<T>& mat, int rows, int cols) {
 }
 
 int main(int argc, char* argv[]) {
-    const double alpha = 0.3125;
-    const int m = 99;
-    const double dt = 0.001;
-    const double t_final_1D = 1.0;
-    const double t_final_2D = 1.0;
+    bool runSimulation = false;
+    Vector<double> v1d({0.0, 1.0, 2.0});
+    Vector<double> v2d({2.0, 1.0, 0.0});
+    Vector<float> v1f({0.0f, 1.0f, 2.0f});
+    Vector<float> v2f({2.0f, 1.0f, 0.0f});
+    Vector<int> v1i({0, 1, 2});
+    Vector<int> v2i({2, 1, 0});
 
-    Heat<1, double> solver1D(alpha, m, dt);
-    auto solution1D = solver1D.solve(t_final_1D);
-    auto exactSolution1D = solver1D.exact(t_final_1D);
-    for (int i = 0; i < solution1D.len(); ++i) {
-        std::cout << "Numerical 1D: " << solution1D[i] << ", Exact 1D: " << exactSolution1D[i] << std::endl;
+    Vector<float> v_test = v1d;
+
+    if(runSimulation) {
+        const double alpha = 0.3125;
+        const int m = 99;
+        const double dt = 0.001;
+        const double t_final_1D = 1.0;
+        const double t_final_2D = 0.5;
+
+        Heat<1, double> solver1D(alpha, m, dt);
+        auto solution1D = solver1D.solve(t_final_1D);
+        auto exactSolution1D = solver1D.exact(t_final_1D);
+        for (int i = 0; i < solution1D.len(); ++i) {
+            std::cout << "Numerical 1D: " << solution1D[i] << ", Exact 1D: " << exactSolution1D[i] << std::endl;
+        }
+
+//     Print 1D Matrix for verification
+//     printMatrix(solver1D.getMatrix(), m, m);
+
+        Heat<2, double> solver2D(alpha, m, dt);
+        auto solution2D = solver2D.solve(t_final_2D);
+        auto exactSolution2D = solver2D.exact(t_final_2D);
+        for (int i = 0; i < solution2D.len(); ++i) {
+            std::cout << "Numerical 2D: " << solution2D[i] << ", Exact 2D: " << exactSolution2D[i] << std::endl;
+        }
+
+        // Print 2D Matrix for verification
+//     printMatrix(solver2D.getMatrix(), m * m, m * m);
     }
-
-    // Print 1D Matrix for verification
-    // printMatrix(solver1D.getMatrix(), m, m);
-
-//    Heat<2, double> solver2D(alpha, m, dt);
-//    auto solution2D = solver2D.solve(t_final_2D);
-//    auto exactSolution2D = solver2D.exact(t_final_2D);
-//    for (int i = 0; i < solution2D.len(); ++i) {
-//        std::cout << "Numerical 2D: " << solution2D[i] << ", Exact 2D: " << exactSolution2D[i] << std::endl;
-//    }
-
-    // // Print 2D Matrix for verification
-    // printMatrix(solver2D.getMatrix(), m * m, m * m);
-
     return 0;
 }
