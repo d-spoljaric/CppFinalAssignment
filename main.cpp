@@ -176,13 +176,13 @@ public:
     Vector<typename std::common_type<T, U>::type> operator*(const Vector<U>& rhs) const {
         if (rhs.len() != cols) throw std::invalid_argument("Vector length must match the number of matrix columns");
         Vector<typename std::common_type<T, U>::type> result(rows);
-        for (int i = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j) {
-                auto it = data.find({i, j});
-                if (it != data.end()) {
-                    result[i] += it->second * rhs[j];
-                }
-            }
+        for (auto it = data.begin(); it != data.end(); it++){
+            int i = it -> first.first;
+            int j = it -> first.second;
+            T value = it -> second;
+
+            result[j] = result[j] + value*rhs[i];
+
         }
         return result;
     }
@@ -310,17 +310,17 @@ int main(int argc, char* argv[]) {
         }
 
 //  Print 1D Matrix for verification
-//        printMatrix(solver1D.getMatrix(), m, m);
+        printMatrix(solver1D.getMatrix(), m, m);
 //
-//        Heat<2, double> solver2D(alpha, m, dt);
-//        auto solution2D = solver2D.solve(t_final_2D);
-//        auto exactSolution2D = solver2D.exact(t_final_2D);
-//        for (int i = 0; i < solution2D.len(); ++i) {
-//            std::cout << "Numerical 2D: " << solution2D[i] << ", Exact 2D: " << exactSolution2D[i] << std::endl;
+        Heat<2, double> solver2D(alpha, m, dt);
+        auto solution2D = solver2D.solve(t_final_2D);
+        auto exactSolution2D = solver2D.exact(t_final_2D);
+        for (int i = 0; i < solution2D.len(); ++i) {
+            std::cout << "Numerical 2D: " << solution2D[i] << ", Exact 2D: " << exactSolution2D[i] << std::endl;
         }
 
 //     Print 2D Matrix for verification
-//        printMatrix(solver2D.getMatrix(), m * m, m * m);
-//    }
+        printMatrix(solver2D.getMatrix(), m * m, m * m);
+    }
     return 0;
 }
