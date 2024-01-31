@@ -256,24 +256,52 @@ private:
     Matrix<T> M;
 
 public:
+//    Heat(T alpha, int m, T dt) : alpha(alpha), m(m), dt(dt), total_nodes(std::pow(m, n)), M(total_nodes, total_nodes) {
+//        T dx = 1.0 / (m + 1);
+//        if (n == 1) {
+//            // Assembly for 1D case
+//            for (int i = 0; i < total_nodes; ++i) {
+//                if (i > 0) M[{i, i - 1}] = -alpha * dt / (dx * dx);
+//                M[{i, i}] = 1 + 2 * alpha * dt / (dx * dx);
+//                if (i < total_nodes - 1) M[{i, i + 1}] = -alpha * dt / (dx * dx);
+//            }
+//        } else if (n == 2) {
+//            // Assembly for 2D case
+//            for (int i = 0; i < total_nodes; ++i) {
+//                if (i % m > 0) M[{i, i - 1}] = -alpha * dt / (dx * dx);  // Left
+//                if (i % m < m - 1) M[{i, i + 1}] = -alpha * dt / (dx * dx);  // Right
+//                if (i >= m) M[{i, i - m}] = -alpha * dt / (dx * dx);  // Top
+//                if (i < total_nodes - m) M[{i, i + m}] = -alpha * dt / (dx * dx);  // Bottom
+//                M[{i, i}] = 1 + 4 * alpha * dt / (dx * dx);  // Center
+//            }
+//        }
+//    }
+
     Heat(T alpha, int m, T dt) : alpha(alpha), m(m), dt(dt), total_nodes(std::pow(m, n)), M(total_nodes, total_nodes) {
         T dx = 1.0 / (m + 1);
-        if (n == 1) {
-            // Assembly for 1D case
-            for (int i = 0; i < total_nodes; ++i) {
-                if (i > 0) M[{i, i - 1}] = -alpha * dt / (dx * dx);
-                M[{i, i}] = 1 + 2 * alpha * dt / (dx * dx);
-                if (i < total_nodes - 1) M[{i, i + 1}] = -alpha * dt / (dx * dx);
+        T beta = alpha * dt / std::pow(dx, 2);
+
+        for(int i = 0; i < total_nodes; ++i) {
+            for(int k = 0; k < n; ++k){
+                int j_left = i - std::pow(m, k);
+                int j_right = i + std::pow(m, k);
+
+                if(j_left >= 0 ) {
+                    M[{i, i - std::pow(m, k)}] = -beta;
+                }
+                if(j_right < total_nodes){
+                    M[{i, i + std::pow(m, k)}] = -beta;
+                }
+                if (i % int(std::pow(m,k+1)) == 0.0 && i > 0){
+                    for (int h = 0; h < std::pow(m,k);h++)
+                    {
+                        M[{i + h,i - std::pow(m,k) + h}] = 0.0;
+                        M[{i + h - std::pow(m,k), i + h}] = 0.0;
+                    }
+                }
+
             }
-        } else if (n == 2) {
-            // Assembly for 2D case
-            for (int i = 0; i < total_nodes; ++i) {
-                if (i % m > 0) M[{i, i - 1}] = -alpha * dt / (dx * dx);  // Left
-                if (i % m < m - 1) M[{i, i + 1}] = -alpha * dt / (dx * dx);  // Right
-                if (i >= m) M[{i, i - m}] = -alpha * dt / (dx * dx);  // Top
-                if (i < total_nodes - m) M[{i, i + m}] = -alpha * dt / (dx * dx);  // Bottom
-                M[{i, i}] = 1 + 4 * alpha * dt / (dx * dx);  // Center
-            }
+            M[{i, i}] = 1 + beta * 2 * n;
         }
     }
 
@@ -344,10 +372,12 @@ int main(int argc, char* argv[]) {
         const double dt = 0.001;
         const double t_final_1D = 1.0;
         const double t_final_2D = 0.5;
-//
-//        Heat<1, double> solver1D(alpha, m, dt);
-//        auto solution1D = solver1D.solve(t_final_1D);
-//        auto exactSolution1D = solver1D.exact(t_final_1D);
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        Heat<1, double> solver1D(alpha, m, dt);
+        auto solution1D = solver1D.solve(t_final_1D);
+        auto exactSolution1D = solver1D.exact(t_final_1D);
 //        for (int i = 0; i < solution1D.len(); ++i) {
 //            std::cout << "Numerical 1D: " << solution1D[i] << ", Exact 1D: " << exactSolution1D[i] << std::endl;
 //        }
@@ -355,13 +385,12 @@ int main(int argc, char* argv[]) {
 //     Print 1D Matrix for verification
 //     printMatrix(solver1D.getMatrix(), m, m);
 
-        auto start = std::chrono::high_resolution_clock::now();
         Heat<2, double> solver2D(alpha, m, dt);
         auto solution2D = solver2D.solve(t_final_2D);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        std::cout << duration.count() << std::endl;
         auto exactSolution2D = solver2D.exact(t_final_2D);
+        std::cout << duration.count() << std::endl;
 //        std::cout << "Numerical at (0,0): " << numerical[0] << "| Exact at (0.0): " << exact[0] << std::endl;
 
 
